@@ -101,7 +101,6 @@ export default function App() {
       </h1>
 
       <div className="grid md:grid-cols-3 gap-6">
-
         {/* CAMERA */}
         <div className="bg-gray-900 rounded-xl p-4 shadow-lg border border-gray-700">
           <h2 className="text-xl font-semibold mb-4">📷 Camera</h2>
@@ -171,7 +170,6 @@ export default function App() {
             </p>
           )}
         </div>
-
       </div>
     </div>
   );
