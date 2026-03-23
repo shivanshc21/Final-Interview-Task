@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 
 export default function App() {
   const videoRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const [cameraError, setCameraError] = useState("");
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
-  const [device, setDevice] = useState("");
+  const [device, setDevice] = useState(null);
   const [loadingBT, setLoadingBT] = useState(false);
 
   // 🎥 CAMERA
@@ -25,7 +26,16 @@ export default function App() {
   }, []);
 
   // 🎤 VOICE
-  const startListening = () => {
+  const toggleListening = () => {
+    if (listening) {
+      // Stop listening
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        setListening(false);
+      }
+      return;
+    }
+
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -46,8 +56,10 @@ export default function App() {
     };
 
     recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
 
     recognition.start();
+    recognitionRef.current = recognition;
     setListening(true);
   };
 
@@ -61,16 +73,25 @@ export default function App() {
         return;
       }
 
-      const device = await navigator.bluetooth.requestDevice({
+      const btDevice = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
       });
 
-      setDevice(device.name || "Unnamed Device");
+      setDevice(btDevice);
     } catch (err) {
       alert("Bluetooth cancelled or denied");
     } finally {
       setLoadingBT(false);
     }
+  };
+
+  const getDeviceName = () => {
+    if (!device) return "No device selected";
+    return device.name || `Device (${device.id.substring(0, 8)}...)`;
+  };
+
+  const disconnectBluetooth = () => {
+    setDevice(null);
   };
 
   return (
@@ -101,10 +122,14 @@ export default function App() {
           <h2 className="text-xl font-semibold mb-4">🎤 Voice</h2>
 
           <button
-            onClick={startListening}
-            className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg mb-4"
+            onClick={toggleListening}
+            className={`px-4 py-2 rounded-lg mb-4 ${
+              listening
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-green-500 hover:bg-green-600"
+            }`}
           >
-            {listening ? "Listening..." : "Start Listening"}
+            {listening ? "Stop Listening" : "Start Listening"}
           </button>
 
           <div className="bg-black p-3 rounded-lg min-h-[100px] border border-gray-700">
@@ -118,14 +143,33 @@ export default function App() {
 
           <button
             onClick={connectBluetooth}
-            className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg mb-4"
+            disabled={device !== null}
+            className={`px-4 py-2 rounded-lg mb-4 ${
+              device
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600"
+            }`}
           >
             {loadingBT ? "Scanning..." : "Scan Devices"}
           </button>
 
-          <p className="text-gray-300">
-            {device ? `Connected: ${device}` : "No device selected"}
+          {device && (
+            <button
+              onClick={disconnectBluetooth}
+              className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg mb-4 w-full"
+            >
+              Disconnect
+            </button>
+          )}
+
+          <p className="text-gray-300 font-semibold">
+            {device ? `✓ Connected: ${getDeviceName()}` : "No device selected"}
           </p>
+          {device && (
+            <p className="text-gray-500 text-sm mt-2 break-words">
+              ID: {device.id}
+            </p>
+          )}
         </div>
 
       </div>
